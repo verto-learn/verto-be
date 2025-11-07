@@ -13,7 +13,7 @@ import { APIResponse } from "../../models/response";
 
 type InferBody<T extends z.ZodTypeAny> = z.infer<T>;
 
-// user.controller.ts
+
 export const createUser = async (
   req: Request<unknown, unknown, InferBody<typeof createUserSchema>>,
   res: Response<APIResponse>,
@@ -42,7 +42,7 @@ export const loginUser = async (
   const { email, password } = req.body as z.infer<typeof loginUserSchema>;
 
   try {
-    const { full_name, role } = await loginUserService(
+    const { full_name, selected_courses, role } = await loginUserService(
       email,
       password,
       res,
@@ -54,7 +54,7 @@ export const loginUser = async (
       data: {
         full_name,
         email,
-        // selected_course,
+        selected_courses,
         role,
       },
     });

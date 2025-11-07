@@ -1,16 +1,21 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-generator client {
-  provider = "prisma-client-js"
-}
-
+/**
+ * Defines the primary database connection for the application.
+ * This datasource block specifies the database provider which is PostgreSQL,
+ * and the connection URL, which is typically loaded from an environment variable.
+ * Adjust the URL as needed to match your deployment environment.
+ */
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+/**
+ * Configures the Prisma Client generator.
+ * This block specifies that the Prisma Client should be generated using the JavaScript provider,
+ * and the output directory for the generated client code.
+ */
+generator client {
+  provider = "prisma-client-js"
 }
 
 enum UserRole {
@@ -19,12 +24,168 @@ enum UserRole {
 }
 
 model User {
-    id        String   @id @default(uuid())
-    full_name String
-    email     String   @unique
-    password  String
-    role      UserRole @default(user)
+  id                String   @id @default(uuid())
+  full_name         String
+  email             String   @unique
+  password          String
+  role              UserRole @default(user)
 
-    created_at DateTime @default(now())
-    updated_at DateTime @updatedAt
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  generated_course  Course[]
+  selected_courses  SelectedCourse[] 
+  chapter_progress  chapterProgress[]
+  study_case_proofs StudyCaseProof[]
+
+  quiz_attempts     QuizAttempt[]
+}
+
+model Topic {
+  id              String @id @default(cuid())
+  name            String @unique
+  description     String @db.Text
+
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  courses         Course[]
+  quiz_questions  QuizQuestion[]
+  quiz_attempts   QuizAttempt[]
+}
+
+enum CourseDifficulty {
+  beginner
+  intermediate
+  advanced
+}
+
+model Course {
+  id                    String @id @default(cuid())
+
+  title                 String
+  description           String @db.Text
+
+  topic_id              String
+  difficulty            CourseDifficulty
+  topic                 Topic            @relation(fields: [topic_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  generated_by          String
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  generated_by_user     User             @relation(fields: [generated_by], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  chapters              Chapter[]
+  SelectedCourse        SelectedCourse[]
+
+  @@unique([topic_id, difficulty])
+}
+
+model Chapter {
+  id                String @id @default(cuid())
+  course_id         String
+  order_index       Int
+
+  title             String
+  description       String  @db.Text
+  content           String? @db.Text
+  video_url         String? @db.Text
+  video_url_embed   String? @db.Text
+
+  is_active         Boolean @default(false)
+  is_study_case     Boolean @default(false)
+
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  course            Course            @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  progress          chapterProgress[]
+  study_case_proofs StudyCaseProof[]
+
+  @@unique([course_id, order_index])
+  @@index([course_id, order_index])
+}
+
+model SelectedCourse {
+  user_id       String 
+  course_id     String
+
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  course Course @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([user_id, course_id])
+  @@unique([user_id, course_id]) 
+}
+
+model StudyCaseProof {
+  chapter_id      String
+  user_id         String
+
+  proof_url       String  @db.Text
+  approved        Boolean @default(false)
+
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  chapter Chapter @relation(fields: [chapter_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([chapter_id, user_id])
+  @@unique([chapter_id, user_id])
+}
+
+model chapterProgress {
+  user_id         String
+  chapter_id      String
+
+  is_done         Boolean @default(false)
+
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  chapter Chapter @relation(fields: [chapter_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([user_id, chapter_id])
+  @@unique([user_id, chapter_id])
+}
+
+model QuizQuestion {
+  id                     String @id @default(cuid())
+  topic_id               String
+  topic    Topic         @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+
+  level                  CourseDifficulty
+
+  question_text          String @db.Text
+
+  options                Json
+  correct_answer_index   Int
+
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  @@index([topic_id, level])
+}
+
+model QuizAttempt {
+  id              String @id @default(cuid())
+  user_id         String
+  topic_id        String
+
+  score           Int
+  total           Int
+
+  calculated_difficulty CourseDifficulty
+
+  created_at DateTime @default(now())
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, topic_id])
 }

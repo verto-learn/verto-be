@@ -1,11 +1,11 @@
 import prisma from "../../database/database";
-import bcrypt from "bcrypt"
+import bcrypt from "bcrypt";
 import { generateToken } from "../../shared/generateToken";
 import { Response } from "express";
+import { checkUser } from "../../shared/checkUser";
 import { setAuthCookie } from "../../shared/setAuthCookie";
 import { clearAuthCookie } from "../../shared/clearAuthCookie";
 import { APIError } from "../../middleware/errorHandler";
-import { checkUser } from "../../shared/checkUser";
 
 
 export const createUserService = async (
@@ -51,11 +51,22 @@ export const loginUserService = async (
   setAuthCookie(token, res);
 
   const { full_name, role } = user;
+  const userWithCourses = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      selected_courses: {
+        select: {
+          course_id: true,
+        },
+      },
+    },
+  });
+
   return {
     full_name,
     email,
-    // selected_course,
     role,
+    selected_courses: userWithCourses?.selected_courses ?? [],
   };
 };
 
@@ -69,11 +80,11 @@ export const getUserService = async (user_id: string) => {
       full_name: true,
       email: true,
       role: true,
-    //   selected_course: {
-    //     select: {
-    //       course_id: true,
-    //     },
-    //   },
+      selected_courses: {
+        select: {
+          course_id: true,
+        },
+      },
       created_at: true,
       updated_at: true,
     },
