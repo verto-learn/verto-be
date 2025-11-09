@@ -67,6 +67,7 @@ export const processChapterQueue = async (
     chapter.description,
     chapter.order_index,
     chapter.is_study_case,
+    chapter.score,
   );
 
   try {
