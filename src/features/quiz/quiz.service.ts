@@ -24,9 +24,9 @@ export const getQuizQuestionsService = async (topicId: string) => {
   });
 
   const quizQuestions = [
-    ...byLevel.beginner.slice(0, 2),
-    ...byLevel.intermediate.slice(0, 2),
-    ...byLevel.advanced.slice(0, 1),
+    ...byLevel.beginner,
+    ...byLevel.intermediate,
+    ...byLevel.advanced,
   ];
 
 
@@ -48,6 +48,40 @@ export const getQuizQuestionsService = async (topicId: string) => {
   return safeQuestions;
 };
 
+type CreateQuestionInput = {
+  topicId: string;
+  questionText: string;
+  options: string[];
+  correctAnswerIndex: number;
+  level: CourseDifficulty;
+};
+
+/**
+ * Service untuk membuat pertanyaan kuis baru
+ */
+export const createQuizQuestionService = async (
+  data: CreateQuestionInput,
+) => {
+  const { topicId, questionText, options, correctAnswerIndex, level } = data;
+
+  // Opsional: Anda bisa cek dulu apakah topicId valid/ada di db
+  // const topicExists = await prisma.topic.findUnique({ where: { id: topicId } });
+  // if (!topicExists) {
+  //   throw new APIError("Topic not found", 404);
+  // }
+
+  const newQuestion = await prisma.quizQuestion.create({
+    data: {
+      topic_id: topicId,
+      question_text: questionText,
+      options: options,
+      correct_answer_index: correctAnswerIndex,
+      level: level,
+    },
+  });
+
+  return newQuestion;
+};
 
 export const submitQuizService = async (
   userId: string,
@@ -114,7 +148,7 @@ export const submitQuizService = async (
     });
   }
 
-  // 7. Kembalikan hasilnya
+
   return {
     score: attempt.score,
     total: attempt.total,
@@ -122,20 +156,18 @@ export const submitQuizService = async (
   };
 };
 
-/**
- * Helper function untuk memetakan skor ke level
- */
+
 function calculateDifficulty(
   score: number,
   total: number,
 ): CourseDifficulty {
   const percentage = score / total;
 
-  if (percentage <= 0.3) { // 0-1 dari 5 soal
+  if (percentage <= 0.3) { 
     return CourseDifficulty.beginner;
-  } else if (percentage <= 0.7) { // 2-3 dari 5 soal
+  } else if (percentage <= 0.7) { 
     return CourseDifficulty.intermediate;
-  } else { // 4-5 dari 5 soal
+  } else {
     return CourseDifficulty.advanced;
   }
 }

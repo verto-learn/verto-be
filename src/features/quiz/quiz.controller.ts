@@ -1,10 +1,8 @@
-// File: src/quiz/quiz.controller.ts
-
 import { NextFunction, Request, Response } from "express";
 import { AuthRequest } from "../../middleware/verifyToken"; // Asumsi Anda punya ini
 import { APIResponse } from "../../models/response";
-import { getQuizQuestionsSchema, submitQuizSchema } from "./quiz.schema";
-import { getQuizQuestionsService, submitQuizService } from "./quiz.service";
+import { createQuizQuestionSchema, getQuizQuestionsSchema, submitQuizSchema } from "./quiz.schema";
+import { createQuizQuestionService, getQuizQuestionsService, submitQuizService } from "./quiz.service";
 
 export const getQuizQuestions = async (
   req: Request,
@@ -24,6 +22,29 @@ export const getQuizQuestions = async (
     });
   } catch (err) {
     next(err);
+  }
+};
+
+export const createQuizQuestion = async (
+  req: AuthRequest, 
+  res: Response<APIResponse>,
+  next: NextFunction,
+) => {
+  try {
+  
+    const questionData = createQuizQuestionSchema.parse(req.body);
+
+
+    const newQuestion = await createQuizQuestionService(questionData);
+
+
+    return res.status(201).json({
+      status: "success",
+      message: "Quiz question created successfully",
+      data: newQuestion,
+    });
+  } catch (err) {
+    next(err); 
   }
 };
 

@@ -27,6 +27,7 @@ Rules:
 - JSON only (no markdown).
 - 5–8 chapters.
 - No placeholders.
+- Using Indonesian language.
 `;
 };
 
@@ -49,10 +50,11 @@ export const chapterPrompt = (
     - Use semantic Markdown tags like ##, ###, -, 1., \`inline code\`, and fenced code blocks.
     - Do NOT return JSON, HTML tags, or extra explanations.
     - The response must be pure Markdown.
+    - Use Indonesian language for description, except course title.
 
     Context:
     - Is Chapter a study case: ${isStudyCase}
-    - Score for this chapter: ${chapterScore} // <-- KONTEKS BARU
+    - Score for this chapter: ${chapterScore} 
     - Course overview: ${courseDesc}  
     - Chapter order index: ${chapterOrderIndex}  
     - Chapter: ${chapterName}  
