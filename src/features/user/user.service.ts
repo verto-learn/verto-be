@@ -85,6 +85,7 @@ export const getUserService = async (user_id: string) => {
           course_id: true,
         },
       },
+      total_score: true,
       created_at: true,
       updated_at: true,
     },
