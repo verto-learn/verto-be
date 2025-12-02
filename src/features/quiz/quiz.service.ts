@@ -64,12 +64,6 @@ export const createQuizQuestionService = async (
 ) => {
   const { topicId, questionText, options, correctAnswerIndex, level } = data;
 
-  // Opsional: Anda bisa cek dulu apakah topicId valid/ada di db
-  // const topicExists = await prisma.topic.findUnique({ where: { id: topicId } });
-  // if (!topicExists) {
-  //   throw new APIError("Topic not found", 404);
-  // }
-
   const newQuestion = await prisma.quizQuestion.create({
     data: {
       topic_id: topicId,
@@ -148,11 +142,70 @@ export const submitQuizService = async (
     });
   }
 
+  const difficultyResult = attempt.calculated_difficulty;
+
+  console.log("Mencari course dengan syarat:");
+  console.log("1. Topic ID:", topicId);
+  console.log("2. Difficulty:", difficultyResult);
+  console.log("3. Is Published: true");
+
+  const matchedCourse = await prisma.course.findFirst({
+    where: {
+      topic_id: topicId,
+      difficulty: difficultyResult,
+      is_published: true,
+    },
+    include: {
+      chapters: { orderBy: { order_index: "asc" } },
+    },
+  });
+
+  console.log("Hasil Pencarian:", matchedCourse);
+
+  if (!matchedCourse) {
+    // Jangan error, tapi beritahu bahwa course belum tersedia
+    return {
+      score: attempt.score,
+      total: attempt.total,
+      calculated_difficulty: attempt.calculated_difficulty,
+      message: "Course untuk level ini belum tersedia. Silakan cek nanti."
+    };
+  }
+
+  // [BARU] Enroll User (Cek duplikasi dulu)
+  const existingEnrollment = await prisma.selectedCourse.findUnique({
+    where: {
+      user_id_course_id: { user_id: userId, course_id: matchedCourse.id },
+    },
+  });
+
+  if (!existingEnrollment) {
+    await prisma.selectedCourse.create({
+      data: {
+        user_id: userId,
+        course_id: matchedCourse.id,
+        user_score: 0,
+      },
+    });
+
+    const progressData = matchedCourse.chapters.map((chapter) => ({
+      user_id: userId,
+      chapter_id: chapter.id,
+      is_done: false,
+    }));
+
+    await prisma.chapterProgress.createMany({ data: progressData });
+  }
+
 
   return {
     score: attempt.score,
     total: attempt.total,
     calculated_difficulty: attempt.calculated_difficulty,
+    assigned_course: {
+      id: matchedCourse.id,
+      title: matchedCourse.title
+    }
   };
 };
 
@@ -163,9 +216,9 @@ function calculateDifficulty(
 ): CourseDifficulty {
   const percentage = score / total;
 
-  if (percentage <= 0.3) { 
+  if (percentage <= 0.3) {
     return CourseDifficulty.beginner;
-  } else if (percentage <= 0.7) { 
+  } else if (percentage <= 0.7) {
     return CourseDifficulty.intermediate;
   } else {
     return CourseDifficulty.advanced;

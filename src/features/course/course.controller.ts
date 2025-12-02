@@ -20,6 +20,7 @@ import {
   updateStatusStudyCaseSchema,
 } from "./course.schema";
 import { AuthRequest } from "../../middleware/verifyToken";
+import { gradingQueue } from "../../shared/gradingQueue";
 
 export const createCourse = async (
   req: AuthRequest,
@@ -123,21 +124,25 @@ export const collectStudyCaseProof = async (
   next: NextFunction,
 ) => {
   try {
-    const user_id = req?.user?.user_id;
+    const user_id = req?.user?.user_id as string;
     const { chapter_id } = req.params;
-
-    const { proof_url } = req.body as z.infer<
-      typeof collectStudyCaseProofSchema
-    >;
+    
+    const { proof_url, notes } = req.body as z.infer<typeof collectStudyCaseProofSchema>;
 
     const result = await collectStudyCaseProofService(
-      user_id as string,
+      user_id,
       chapter_id,
       proof_url,
+      notes
     );
 
+    await gradingQueue.add({ 
+        chapterId: chapter_id, 
+        userId: user_id 
+    });
+
     return res.status(200).json({
-      message: "Study case proof collected successfully",
+      message: "Tugas dikirim! AI sedang menilai...",
       status: "success",
       data: result,
     });

@@ -27,13 +27,8 @@ export const getCourseDetailSchema = z.object({
 });
 
 export const collectStudyCaseProofSchema = z.object({
-  proof_url: z
-    .url({
-      message: "Proof URL must be a valid URL",
-    })
-    .min(1, {
-      message: "Proof URL is required",
-    }),
+proof_url: z.string().url().min(1),
+  notes: z.string().min(10, { message: "Deskripsi tugas minimal 10 karakter" }),
 });
 
 export const updateStatusStudyCaseSchema = z.object({
@@ -45,3 +40,4 @@ export const updateStatusStudyCaseSchema = z.object({
     message: "User ID is required",
   }),
 });
+

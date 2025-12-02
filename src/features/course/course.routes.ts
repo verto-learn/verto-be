@@ -25,6 +25,7 @@ const router = Router();
 router.post(
   "/",
   verifyToken,
+  isAdmin,
   validate(createCourseSchema, "body"),
   createCourse,
 );

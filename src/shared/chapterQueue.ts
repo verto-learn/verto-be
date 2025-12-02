@@ -22,6 +22,20 @@ export const chapterQueue = new Bull("chapter", {
   },
 });
 
+// Helpful connection logging for debugging
+console.log(`[REDIS] Configured Redis -> host: ${config.redisHost}, port: ${config.redisPort}, db: ${config.redisDb}`);
+chapterQueue.on("connect", () => {
+  console.log("[REDIS] Queue connected to Redis successfully ✅");
+});
+
+chapterQueue.on("ready", () => {
+  console.log("[REDIS] Queue is ready ✅");
+});
+
+chapterQueue.on("error", (err) => {
+  console.error("[REDIS] Queue connection error ❌", err);
+});
+
 export const generateChapterContent = async (
   chapter: GeneratedChapterContentRequest,
 ) => {
@@ -70,6 +84,7 @@ export const processChapterQueue = async (
     chapter.score,
   );
 
+  console.log(`[QUEUE] Processing chapter job ${chapterId}`);
   try {
     const responseModel = await textGeminiModel.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],

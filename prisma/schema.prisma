@@ -1,8 +1,7 @@
 /**
  * Defines the primary database connection for the application.
- * This datasource block specifies the database provider which is PostgreSQL,
- * and the connection URL, which is typically loaded from an environment variable.
- * Adjust the URL as needed to match your deployment environment.
+ * This datasource block specifies the database provider which is PostgreSQL.
+ * Connection URL is now configured in prisma.config.ts for Prisma 7 compatibility.
  */
 datasource db {
   provider = "postgresql"
@@ -67,12 +66,12 @@ model Course {
   id                    String @id @default(cuid())
 
   title                 String
+  is_published          Boolean @default(false)
   description           String @db.Text
   total_possible_score  Int @default(0)
   topic_id              String
   difficulty            CourseDifficulty
   topic                 Topic            @relation(fields: [topic_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
   generated_by          String
 
   created_at            DateTime @default(now())
@@ -125,7 +124,9 @@ model SelectedCourse {
 model StudyCaseProof {
   chapter_id      String
   user_id         String
-
+  submission_note String? @db.Text
+  ai_score        Int?    @default(0)
+  ai_feedback     String? @db.Text
   proof_url       String  @db.Text
   approved        Boolean @default(false)
 
@@ -144,6 +145,7 @@ model chapterProgress {
   chapter_id      String
 
   is_done         Boolean @default(false)
+  is_active       Boolean @default(false)
 
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt

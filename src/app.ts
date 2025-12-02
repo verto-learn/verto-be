@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import router from './features/v1.routes';
 import cors from "cors";
 import { errorHandler } from './middleware/errorHandler';
+import "./shared/chapterQueue";
 
 const app = express();
 

@@ -90,13 +90,13 @@ export const createCourseService = async (
   });
 
   
-  await prisma.selectedCourse.create({ 
-    data: {
-      user_id: userId,
-      course_id: course.id,
-      user_score: 0,
-    },
-  });
+  // await prisma.selectedCourse.create({ 
+  //   data: {
+  //     user_id: userId,
+  //     course_id: course.id,
+  //     user_score: 0,
+  //   },
+  // });
 
  
   for (const chapter of course.chapters) {
@@ -130,7 +130,7 @@ export const getSelectedCoursesService = async (user_id: string) => {
             include: {
               progress: {
                 where: { user_id },
-                select: { is_done: true },
+                select: { is_done: true, is_active: true },
               },
               study_case_proofs: {
                 where: { user_id },
@@ -174,15 +174,16 @@ export const getCourseDetailService = async (
     include: {
       course: {
         include: {
-          topic: { // Sertakan info topik
+          topic: { 
             select: { name: true },
           },
           chapters: { // Ambil semua chapter
             orderBy: { order_index: "asc" },
+            
             include: {
               progress: {
                 where: { user_id },
-                select: { is_done: true },
+                select: { is_done: true, is_active: true, },
               },
               study_case_proofs: {
                 where: { user_id },
@@ -212,6 +213,8 @@ export const getCourseDetailService = async (
     is_study_case: chapter.is_study_case,
     score: chapter.score,
     is_done: chapter.progress[0]?.is_done ?? false,
+    is_active: chapter.is_active ?? false,               // global chapter activation
+    user_is_active: chapter.progress[0]?.is_active ?? false, // per-user active flag
     study_case_proof: chapter.study_case_proofs[0] ?? null,
   }));
 
@@ -235,83 +238,76 @@ export const updateStatusStudyCaseService = async (
   chapter_id: string,
   approved: boolean,
 ) => {
-  const studyCase = await prisma.studyCaseProof.findUnique({
+  const currentProof = await prisma.studyCaseProof.findUnique({
     where: {
       chapter_id_user_id: {
         chapter_id,
         user_id,
       },
     },
+    include: {
+      chapter: {
+        select: {
+          score: true,      
+          course_id: true,  
+        },
+      },
+    },
   });
 
-  if (!studyCase) {
-    throw new APIError("User has not submitted the study case!", 404);
+  if (!currentProof) {
+    throw new APIError("Study case proof not found", 404);
   }
 
-
-  if (studyCase.approved === approved) {
-    return studyCase;
+  if (currentProof.approved === approved) {
+    return currentProof;
   }
 
-  const chapter = await prisma.chapter.findUnique({
-    where: { id: chapter_id },
-    select: { score: true, course_id: true },
-  });
+  const scoreAmount = currentProof.chapter.score;
+  const courseId = currentProof.chapter.course_id;
 
-  if (!chapter || !chapter.course_id || chapter.score === 0) {
-    throw new APIError("Chapter, course, or score not found", 404);
-  }
-
-  const chapterScore = chapter.score;
-  const courseId = chapter.course_id;
-
-
-  const operation = approved ? { increment: chapterScore } : { decrement: chapterScore };
-
+  const scoreOperation = approved
+    ? { increment: scoreAmount }
+    : { decrement: scoreAmount };
 
   try {
-    const [updatedProof, updatedSelectedCourse, updatedUser] =
-      await prisma.$transaction([
+    const [updatedProof] = await prisma.$transaction([
+      prisma.studyCaseProof.update({
+        where: {
+          chapter_id_user_id: { chapter_id, user_id },
+        },
+        data: { approved },
+      }),
 
-        prisma.studyCaseProof.update({
-          where: {
-            chapter_id_user_id: {
-              chapter_id,
-              user_id,
-            },
-          },
-          data: {
-            approved,
-          },
-        }),
+      prisma.user.update({
+        where: { id: user_id },
+        data: {
+          total_score: scoreOperation,
+        },
+      }),
 
-        prisma.selectedCourse.update({
-          where: {
-            user_id_course_id: {
-              user_id: user_id,
-              course_id: courseId,
-            },
-          },
-          data: {
-            user_score: operation,
-          },
-        }),
+      prisma.selectedCourse.update({
+        where: {
+          user_id_course_id: { user_id, course_id: courseId },
+        },
+        data: {
+          user_score: scoreOperation,
+        },
+      }),
 
-        prisma.user.update({
-          where: {
-            id: user_id,
-          },
-          data: {
-            total_score: operation,
-          },
-        }),
-      ]);
-    
-    return updatedProof; 
+      prisma.chapterProgress.update({
+        where: {
+            user_id_chapter_id: { user_id, chapter_id }
+        },
+        data: { is_done: approved }
+      })
+    ]);
 
-  } catch (err) {
-    console.error("Failed to update study case status:", err);
-    throw new APIError("Transaction failed. Could not update scores.", 500);
+    return updatedProof;
+
+  } catch (error) {
+    console.error("Failed to update score transaction:", error);
+    throw new APIError("Failed to update status and score", 500);
   }
 };
 
@@ -319,6 +315,7 @@ export const collectStudyCaseProofService = async (
   user_id: string,
   chapter_id: string,
   proof_url: string,
+  notes: string
 ) => {
   const chapter = await prisma.chapter.findUnique({
     where: { id: chapter_id, is_study_case: true },
@@ -339,10 +336,14 @@ export const collectStudyCaseProofService = async (
       chapter_id,
       user_id,
       proof_url,
+      submission_note: notes
     },
     update: {
       proof_url,
+      submission_note: notes, 
       approved: false, 
+      ai_score: 0,    
+      ai_feedback: null
     },
   });
 
