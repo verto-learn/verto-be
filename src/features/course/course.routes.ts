@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  chatWithChapter,
   collectStudyCaseProof,
   createCourse,
   deleteSelectedCourse,
@@ -63,6 +64,12 @@ router.patch(
   isAdmin,
   validate(updateStatusStudyCaseSchema, "body"),
   updateStatusStudyCase,
+);
+
+router.post(
+  "/chat", 
+  verifyToken, 
+  chatWithChapter
 );
 
 export default router;

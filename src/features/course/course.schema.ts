@@ -41,3 +41,8 @@ export const updateStatusStudyCaseSchema = z.object({
   }),
 });
 
+export const chatWithChapterSchema = z.object({
+  question: z.string().min(3, "Pertanyaan terlalu pendek"),
+  chapterId: z.string().cuid(),
+});
+

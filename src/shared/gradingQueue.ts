@@ -14,11 +14,11 @@ export const gradingQueue = new Bull("grading", {
 async function fetchGithubCode(url: string): Promise<string> {
   if (!url.includes("github.com")) return "";
   try {
- 
+
     const rawUrl = url
       .replace("github.com", "raw.githubusercontent.com")
       .replace("/blob/", "/");
-    
+
     const res = await fetch(rawUrl);
     if (res.ok) return await res.text();
   } catch (e) {
@@ -35,14 +35,14 @@ export const processGradingQueue = async (job: Job) => {
     where: {
       chapter_id_user_id: { chapter_id: chapterId, user_id: userId },
     },
-    include: { 
+    include: {
       chapter: {
         select: {
           content: true,
-          score: true,      
-          course_id: true   
+          score: true,
+          course_id: true
         }
-      } 
+      }
     },
   });
 
@@ -57,90 +57,101 @@ export const processGradingQueue = async (job: Job) => {
 
 
   const prompt = `
-    Bertindaklah sebagai Senior Engineer yang menilai tugas mahasiswa.
-    
-    SOAL/INSTRUKSI:
-    ${proof.chapter.content}
+        Bertindaklah sebagai Senior Engineer yang menilai kualitas tugas mahasiswa secara objektif dan ketat.
 
-    JAWABAN MAHASISWA:
-    - URL: ${proof.proof_url}
-    - Penjelasan: "${proof.submission_note}"
-    ${codeSnippet ? `- Cuplikan Kode: \n\`\`\`\n${codeSnippet}\n\`\`\`` : ""}
+        === SOAL / INSTRUKSI ===
+        ${proof.chapter.content}
 
-    TUGAS:
-    Nilai relevansi tugas ini (0-100).
-    - Jika ada kode, cek apakah sesuai instruksi.
-    - Jika tidak ada kode, nilai logika penjelasannya.
-    - Berikan feedback singkat (maks 2 kalimat) dalam Bahasa Indonesia.
+        === JAWABAN MAHASISWA ===
+        - URL: ${proof.proof_url}
+        - Penjelasan: "${proof.submission_note}"
+        ${codeSnippet ? `- Cuplikan Kode:\n\`\`\`\n${codeSnippet}\n\`\`\`` : ""}
 
-    Output JSON Only:
-    { "score": number, "feedback": string }
+        === TUGAS ANDA ===
+        Berikan penilaian dalam rentang 0–100 berdasarkan kriteria:
+        1. Jika terdapat kode:
+          - Cek apakah struktur, logika, dan implementasinya sesuai instruksi.
+          - Nilai aspek relevansi, kebenaran, dan kelengkapan.
+        2. Jika tidak ada kode:
+          - Nilai ketepatan penjelasan, relevansi jawaban, dan pemahaman konsep.
+        3. Berikan *feedback sangat singkat* (maksimal 2 kalimat) dalam Bahasa Indonesia.
+
+        === FORMAT OUTPUT WAJIB ===  
+        Output **HARUS** berupa JSON valid tanpa teks tambahan, tanpa markdown, tanpa penjelasan.  
+        Struktur yang diharuskan:
+        {
+          "score": number,
+          "feedback": "string"
+        }
+
+        Pastikan output benar-benar JSON valid dan tidak menyertakan karakter atau teks di luar objek JSON.
+
   `;
 
   try {
     const result = await textGeminiModel.generateContent(prompt);
     const textResponse = result.response.text();
-    
+
 
     const cleanedJson = textResponse.replace(/```json|```/g, "").trim();
     const data = JSON.parse(cleanedJson);
 
 
-    const isApproved = data.score >= 70; 
+    const isApproved = data.score >= 70;
     const pointsToAward = proof.chapter.score;
 
 
     if (proof.approved === isApproved) {
-        await prisma.studyCaseProof.update({
-            where: { chapter_id_user_id: { chapter_id: chapterId, user_id: userId } },
-            data: {
-                ai_score: data.score,
-                ai_feedback: data.feedback,
-            }
-        });
-        console.log(`User ${userId} re-submitted. Score updated, status unchanged.`);
-        return;
+      await prisma.studyCaseProof.update({
+        where: { chapter_id_user_id: { chapter_id: chapterId, user_id: userId } },
+        data: {
+          ai_score: data.score,
+          ai_feedback: data.feedback,
+        }
+      });
+      console.log(`User ${userId} re-submitted. Score updated, status unchanged.`);
+      return;
     }
 
     if (isApproved) {
-        await prisma.$transaction([
-         
-            prisma.studyCaseProof.update({
-                where: { chapter_id_user_id: { chapter_id: chapterId, user_id: userId } },
-                data: {
-                    ai_score: data.score,
-                    ai_feedback: data.feedback,
-                    approved: true
-                }
-            }),
-          
-            prisma.user.update({
-                where: { id: userId },
-                data: { total_score: { increment: pointsToAward } }
-            }),
-           
-            prisma.selectedCourse.update({
-                where: { user_id_course_id: { user_id: userId, course_id: proof.chapter.course_id } },
-                data: { user_score: { increment: pointsToAward } }
-            }),
-          
-            prisma.chapterProgress.update({
-                where: { user_id_chapter_id: { user_id: userId, chapter_id: chapterId } },
-                data: { is_done: true }
-            })
-        ]);
-        console.log(`Auto-approved task for user ${userId}. Points awarded: ${pointsToAward}`);
-    } 
+      await prisma.$transaction([
+
+        prisma.studyCaseProof.update({
+          where: { chapter_id_user_id: { chapter_id: chapterId, user_id: userId } },
+          data: {
+            ai_score: data.score,
+            ai_feedback: data.feedback,
+            approved: true
+          }
+        }),
+
+        prisma.user.update({
+          where: { id: userId },
+          data: { total_score: { increment: pointsToAward } }
+        }),
+
+        prisma.selectedCourse.update({
+          where: { user_id_course_id: { user_id: userId, course_id: proof.chapter.course_id } },
+          data: { user_score: { increment: pointsToAward } }
+        }),
+
+        prisma.chapterProgress.update({
+          where: { user_id_chapter_id: { user_id: userId, chapter_id: chapterId } },
+          data: { is_done: true }
+        })
+      ]);
+      console.log(`Auto-approved task for user ${userId}. Points awarded: ${pointsToAward}`);
+    }
     else {
-        await prisma.studyCaseProof.update({
-            where: { chapter_id_user_id: { chapter_id: chapterId, user_id: userId } },
-            data: {
-                ai_score: data.score,
-                ai_feedback: data.feedback,
-                approved: false
-            }
-        });
-        console.log(`Task rejected for user ${userId}. Score: ${data.score}`);
+      await prisma.studyCaseProof.update({
+        where: { chapter_id_user_id: { chapter_id: chapterId, user_id: userId } },
+        data: {
+          ai_score: data.score,
+          ai_feedback: data.feedback,
+          approved: false
+        }
+      });
+      console.log(`Task rejected for user ${userId}. Score: ${data.score}`);
     }
 
   } catch (error) {

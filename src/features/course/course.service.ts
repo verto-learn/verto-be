@@ -430,3 +430,42 @@ export const deleteSelectedCourseService = async (course_id: string) => {
     },
   });
 };
+
+export const chatWithChapterService = async (chapterId: string, question: string) => {
+  const chapter = await prisma.chapter.findUnique({
+    where: { id: chapterId },
+    select: { title: true, content: true, course: { select: { title: true } } }
+  });
+
+  if (!chapter || !chapter.content) {
+    throw new APIError("Materi tidak ditemukan.", 404);
+  }
+  const contextContent = chapter.content.slice(0, 8000); 
+
+  const prompt = `
+    Kamu adalah asisten tutor untuk course "${chapter.course.title}".
+      User sedang mempelajari bab: "${chapter.title}".
+
+      === MATERI BAB INI ===
+      """
+      ${contextContent}
+      """
+
+      === PERTANYAAN USER ===
+      "${question}"
+
+      === INSTRUKSI WAJIB ===
+      1. Jawab pertanyaan **hanya** menggunakan informasi dari materi bab di atas.
+      2. Jika tidak ditemukan jawaban dalam materi, balas:  
+        "Maaf, informasi tersebut tidak ada dalam bab ini."
+      3. Buat jawaban yang:
+        - akurat dan langsung ke inti
+        - ramah, ringkas, dan memotivasi
+        - menggunakan Bahasa Indonesia yang natural
+      4. Jangan menambahkan informasi dari luar materi.
+
+  `;
+
+  const result = await textGeminiModel.generateContent(prompt);
+  return result.response.text();
+};

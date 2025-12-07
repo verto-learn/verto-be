@@ -2,6 +2,7 @@ import { NextFunction, Response } from "express";
 import { APIResponse } from "../../models/response";
 import z from "zod";
 import {
+  chatWithChapterService,
   collectStudyCaseProofService,
   createCourseService,
   deleteSelectedCourseService,
@@ -13,6 +14,7 @@ import {
   updateStatusStudyCaseService,
 } from "./course.service";
 import {
+  chatWithChapterSchema,
   collectStudyCaseProofSchema,
   createCourseSchema,
   deleteCourseSchema,
@@ -226,6 +228,21 @@ export const deleteSelectedCourse = async (
       message: "Course Deleted successfully!",
       status: "success",
       data: deletedCourse,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const chatWithChapter = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { chapterId, question } = chatWithChapterSchema.parse(req.body);
+    
+    const answer = await chatWithChapterService(chapterId, question);
+    
+    return res.status(200).json({
+      status: "success",
+      data: { answer }
     });
   } catch (err) {
     next(err);
