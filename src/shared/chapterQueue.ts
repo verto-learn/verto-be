@@ -22,7 +22,7 @@ export const chapterQueue = new Bull("chapter", {
   },
 });
 
-// Helpful connection logging for debugging
+
 console.log(`[REDIS] Configured Redis -> host: ${config.redisHost}, port: ${config.redisPort}, db: ${config.redisDb}`);
 chapterQueue.on("connect", () => {
   console.log("[REDIS] Queue connected to Redis successfully ✅");

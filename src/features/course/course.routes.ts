@@ -31,10 +31,12 @@ router.post(
   createCourse,
 );
 router.get("/", verifyToken, getSelectedCourses);
+router.get("/all-courses", verifyToken, isAdmin, getAllCourse);
+// Backwards-compatible alias (some clients use singular `all-course`)
+router.get("/all-course", verifyToken, isAdmin, getAllCourse);
 router.get("/:course_id", verifyToken, getCourseDetail);
 
 router.patch("/:chapter_id", verifyToken, selectCompleteChapter);
-router.get("/all-courses", verifyToken, isAdmin, getAllCourse);
 
 router.delete(
   "/:course_id",
