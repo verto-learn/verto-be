@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
+    "start": "node dist/server.js",
     "start:server": "node dist/server.js",
     "start:worker": "node dist/worker.js",
     "dev": "ts-node src/server.ts",
