@@ -134,7 +134,7 @@ export const getSelectedCoursesService = async (user_id: string) => {
               },
               study_case_proofs: {
                 where: { user_id },
-                select: { proof_url: true, approved: true },
+                select: { proof_url: true, approved: true, ai_score: true, ai_feedback: true },
               },
             },
             orderBy: { order_index: "asc" }
@@ -187,7 +187,13 @@ export const getCourseDetailService = async (
               },
               study_case_proofs: {
                 where: { user_id },
-                select: { proof_url: true, approved: true },
+                select: { 
+                  proof_url: true, 
+                  approved: true,
+                  submission_note: true, 
+                  ai_score: true,        
+                  ai_feedback: true     
+                 },
               },
             },
           },
@@ -230,6 +236,35 @@ export const getCourseDetailService = async (
   };
 
   return response;
+};
+
+export const updateCoursePublishStatusService = async (
+  courseId: string,
+  isPublished: boolean
+) => {
+  // Cek apakah course ada
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+  });
+
+  if (!course) {
+    throw new APIError("Course not found", 404);
+  }
+
+  // Update status
+  const updatedCourse = await prisma.course.update({
+    where: { id: courseId },
+    data: {
+      is_published: isPublished,
+    },
+    select: {
+      id: true,
+      title: true,
+      is_published: true,
+    }
+  });
+
+  return updatedCourse;
 };
 
 

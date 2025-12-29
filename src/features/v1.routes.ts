@@ -7,6 +7,7 @@ import courseRoutes from "./course/course.routes";
 import certificateRoutes from "./certificate/certificate.routes";
 import healthRouter from './health/health.routes';
 import queueRoutes from './queue/queue.routes';
+import leaderboardRoutes from "./leaderboard/leaderboard.routes";
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.use("/profile", profileRoutes);
 router.use("/quiz", quizRoutes);
 router.use("/course", courseRoutes);
 router.use("/certificate", certificateRoutes);
+router.use("/leaderboard", leaderboardRoutes);
 router.use('/', healthRouter);
 router.use('/', queueRoutes);
 

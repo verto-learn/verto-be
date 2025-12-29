@@ -2,7 +2,9 @@ import { NextFunction, Request, Response } from "express";
 import {
   changePasswordService,
   createUserService,
+  getAllUsersService,
   getUserService,
+  getUserStatsService,
   loginUserService,
   logoutUserService,
 } from "./user.service";
@@ -119,6 +121,44 @@ export const changePassword = async (
       status: "success",
     });
   } catch (err) {
+    next(err);
+  }
+};
+
+export const getAllUsers = async (
+  req: AuthRequest,
+  res: Response<APIResponse>,
+  next: NextFunction
+) => {
+  try {
+    const users = await getAllUsersService();
+
+    return res.status(200).json({
+      status: "success",
+      message: "Successfully retrieved all users",
+      data: users,
+    });
+  } catch (err) {
+    console.error("Error fetching all users:", err);
+    next(err);
+  }
+};
+
+export const getUserStats = async (
+  req: AuthRequest,
+  res: Response<APIResponse>,
+  next: NextFunction
+) => {
+  try {
+    const stats = await getUserStatsService();
+
+    return res.status(200).json({
+      status: "success",
+      message: "User statistics retrieved successfully",
+      data: stats,
+    });
+  } catch (err) {
+    console.error("Error fetching user stats:", err);
     next(err);
   }
 };

@@ -11,6 +11,7 @@ import {
   getCourseDetailService,
   getSelectedCoursesService,
   selectCompleteChapterService,
+  updateCoursePublishStatusService,
   updateStatusStudyCaseService,
 } from "./course.service";
 import {
@@ -23,6 +24,9 @@ import {
 } from "./course.schema";
 import { AuthRequest } from "../../middleware/verifyToken";
 import { gradingQueue } from "../../shared/gradingQueue";
+import { generateCertificateImage } from "../../shared/certificateGenerator";
+import { APIError } from "../../middleware/errorHandler";
+import prisma from "../../database/database";
 
 export const createCourse = async (
   req: AuthRequest,
@@ -179,6 +183,31 @@ export const updateStatusStudyCase = async (
   }
 };
 
+export const updateCoursePublishStatus = async (
+  req: AuthRequest,
+  res: Response<APIResponse>,
+  next: NextFunction
+) => {
+  try {
+    const { course_id } = req.params;
+    const { is_published } = req.body; // Expect boolean true/false
+
+    if (typeof is_published !== "boolean") {
+        throw new APIError("is_published must be a boolean", 400);
+    }
+
+    const result = await updateCoursePublishStatusService(course_id, is_published);
+
+    return res.status(200).json({
+      status: "success",
+      message: `Course ${result.is_published ? "Published" : "Unpublished"} successfully`,
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getAllCourse = async (
   req: AuthRequest,
   res: Response<APIResponse>,
@@ -244,6 +273,40 @@ export const chatWithChapter = async (req: AuthRequest, res: Response, next: Nex
       status: "success",
       data: { answer }
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getCertificate = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { course_id } = req.params;
+    const user_id = req.user?.user_id;
+
+    // 1. Cek apakah user sudah complete course ini
+    const selection = await prisma.selectedCourse.findUnique({
+      where: { user_id_course_id: { user_id: user_id!, course_id } },
+      include: { user: true, course: true }
+    });
+
+    if (!selection || !selection.is_completed) {
+       throw new APIError("Selesaikan semua materi dan tugas untuk mendapatkan sertifikat.", 403);
+    }
+
+    // 2. Generate Gambar
+    const imageBuffer = await generateCertificateImage(
+        selection.user.full_name,
+        selection.course.title,
+        selection.certificate_id || "PENDING"
+    );
+
+    // 3. Kirim sebagai Gambar (Stream)
+    res.writeHead(200, {
+      "Content-Type": "image/jpeg",
+      "Content-Length": imageBuffer.length,
+    });
+    res.end(imageBuffer);
+
   } catch (err) {
     next(err);
   }

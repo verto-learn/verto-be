@@ -2,7 +2,9 @@ import express from "express";
 import {
   changePassword,
   createUser,
+  getAllUsers,
   getUser,
+  getUserStats,
   loginUser,
   logoutUser,
 } from "./user.controller";
@@ -13,6 +15,7 @@ import {
   loginUserSchema,
 } from "./user.schema";
 import { verifyToken } from "../../middleware/verifyToken";
+import { isAdmin } from "../../middleware/isAdmin";
 
 const router = express.Router();
 
@@ -26,5 +29,7 @@ router.patch(
   verifyToken,
   changePassword,
 );
+router.get("/all-users", verifyToken, isAdmin, getAllUsers);
+router.get("/stats", verifyToken, isAdmin, getUserStats);
 
 export default router;

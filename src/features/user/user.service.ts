@@ -145,3 +145,80 @@ export const changePasswordService = async (
 
   return { message: "Password changed successfully" };
 };
+
+
+export const getAllUsersService = async () => {
+  const users = await prisma.user.findMany({
+    orderBy: {
+      created_at: "desc", // Urutkan dari user paling baru daftar
+    },
+    select: {
+      id: true,
+      full_name: true,
+      email: true,
+      role: true,
+      total_score: true,
+      created_at: true,
+      // Kita hitung jumlah course dan quiz yang diikuti user (opsional, bagus untuk dashboard admin)
+      _count: {
+        select: {
+          selected_courses: true,
+          quiz_attempts: true,
+          generated_course: true,
+        },
+      },
+    },
+  });
+
+  return users;
+};
+
+// ... imports yang sudah ada
+
+export const getUserStatsService = async () => {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  
+  const [totalUsers, totalStudents, totalAdmins, newUsersToday, activeLearners] = await Promise.all([
+    
+
+    prisma.user.count(),
+
+
+    prisma.user.count({
+      where: { role: "user" },
+    }),
+
+
+    prisma.user.count({
+      where: { role: "admin" },
+    }),
+
+    prisma.user.count({
+      where: {
+        created_at: {
+          gte: startOfToday,
+        },
+      },
+    }),
+
+    prisma.user.count({
+      where: {
+        role: "user",
+        selected_courses: {
+          some: {}, 
+        },
+      },
+    }),
+  ]);
+
+  return {
+    total_users: totalUsers,
+    total_students: totalStudents,
+    total_admins: totalAdmins,
+    new_users_today: newUsersToday,
+    active_learners: activeLearners,
+    active_ratio: totalStudents > 0 ? Math.round((activeLearners / totalStudents) * 100) : 0,
+  };
+};

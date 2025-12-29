@@ -6,9 +6,11 @@ import {
   deleteSelectedCourse,
   getAllCourse,
   getAllStudyCaseProofs,
+  getCertificate,
   getCourseDetail,
   getSelectedCourses,
   selectCompleteChapter,
+  updateCoursePublishStatus,
   updateStatusStudyCase,
 } from "./course.controller";
 import { verifyToken } from "../../middleware/verifyToken";
@@ -32,7 +34,6 @@ router.post(
 );
 router.get("/", verifyToken, getSelectedCourses);
 router.get("/all-courses", verifyToken, isAdmin, getAllCourse);
-// Backwards-compatible alias (some clients use singular `all-course`)
 router.get("/all-course", verifyToken, isAdmin, getAllCourse);
 router.get("/:course_id", verifyToken, getCourseDetail);
 
@@ -53,6 +54,13 @@ router.post(
   collectStudyCaseProof,
 );
 
+router.patch(
+  "/:course_id/publish",
+  verifyToken,
+  isAdmin,
+  updateCoursePublishStatus
+);
+
 router.get(
   "/study-case/proofs",
   verifyToken,
@@ -69,9 +77,11 @@ router.patch(
 );
 
 router.post(
-  "/chat", 
-  verifyToken, 
+  "/chat",
+  verifyToken,
   chatWithChapter
 );
+
+router.get("/:course_id/certificate", verifyToken, getCertificate);
 
 export default router;

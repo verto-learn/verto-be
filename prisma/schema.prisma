@@ -23,37 +23,40 @@ enum UserRole {
 }
 
 model User {
-  id                String   @id @default(uuid())
-  full_name         String
-  email             String   @unique
-  password          String
-  role              UserRole @default(user)
-  total_score       Int      @default(0)
+  id          String   @id @default(uuid())
+  full_name   String
+  email       String   @unique
+  password    String
+  role        UserRole @default(user)
+  total_score Int      @default(0)
 
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   generated_course  Course[]
-  selected_courses  SelectedCourse[] 
+  selected_courses  SelectedCourse[]
   chapter_progress  chapterProgress[]
   study_case_proofs StudyCaseProof[]
 
-  quiz_attempts     QuizAttempt[]
+  quiz_attempts QuizAttempt[]
+  assessment    Assessment[]
 
   @@index([total_score])
 }
 
 model Topic {
-  id              String @id @default(cuid())
-  name            String @unique
-  description     String @db.Text
+  id          String @id @default(cuid())
+  name        String @unique
+  description String @db.Text
 
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  courses         Course[]
-  quiz_questions  QuizQuestion[]
-  quiz_attempts   QuizAttempt[]
+  courses            Course[]
+  quiz_questions     QuizQuestion[]
+  quiz_attempts      QuizAttempt[]
+  assessmentQuestion AssessmentQuestion[]
+  assessment         Assessment[]
 }
 
 enum CourseDifficulty {
@@ -62,42 +65,47 @@ enum CourseDifficulty {
   advanced
 }
 
+enum QuizType {
+  PLACEMENT
+  PRACTICE
+}
+
 model Course {
-  id                    String @id @default(cuid())
+  id String @id @default(cuid())
 
-  title                 String
-  is_published          Boolean @default(false)
-  description           String @db.Text
-  total_possible_score  Int @default(0)
-  topic_id              String
-  difficulty            CourseDifficulty
-  topic                 Topic            @relation(fields: [topic_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  generated_by          String
+  title                String
+  is_published         Boolean          @default(false)
+  description          String           @db.Text
+  total_possible_score Int              @default(0)
+  topic_id             String
+  difficulty           CourseDifficulty
+  topic                Topic            @relation(fields: [topic_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  generated_by         String
 
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  generated_by_user     User             @relation(fields: [generated_by], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  chapters              Chapter[]
-  SelectedCourse        SelectedCourse[]
+  generated_by_user User             @relation(fields: [generated_by], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  chapters          Chapter[]
+  SelectedCourse    SelectedCourse[]
 }
 
 model Chapter {
-  id                String @id @default(cuid())
-  course_id         String
-  order_index       Int
-  score             Int @default(0)
-  title             String
-  description       String  @db.Text
-  content           String? @db.Text
-  video_url         String? @db.Text
-  video_url_embed   String? @db.Text
+  id              String  @id @default(cuid())
+  course_id       String
+  order_index     Int
+  score           Int     @default(0)
+  title           String
+  description     String  @db.Text
+  content         String? @db.Text
+  video_url       String? @db.Text
+  video_url_embed String? @db.Text
 
-  is_active         Boolean @default(false)
-  is_study_case     Boolean @default(false)
+  is_active     Boolean @default(false)
+  is_study_case Boolean @default(false)
 
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   course            Course            @relation(fields: [course_id], references: [id], onDelete: Cascade)
   progress          chapterProgress[]
@@ -108,17 +116,20 @@ model Chapter {
 }
 
 model SelectedCourse {
-  user_id       String 
-  course_id     String
-  user_score    Int      @default(0)
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  user_id        String
+  course_id      String
+  user_score     Int     @default(0)
+  is_completed   Boolean @default(false)
+  certificate_id String? @unique
 
-  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  course        Course   @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  course Course @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@id([user_id, course_id])
-  @@unique([user_id, course_id]) 
+  @@unique([user_id, course_id])
 }
 
 model StudyCaseProof {
@@ -130,8 +141,8 @@ model StudyCaseProof {
   proof_url       String  @db.Text
   approved        Boolean @default(false)
 
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   chapter Chapter @relation(fields: [chapter_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -141,14 +152,14 @@ model StudyCaseProof {
 }
 
 model chapterProgress {
-  user_id         String
-  chapter_id      String
+  user_id    String
+  chapter_id String
 
-  is_done         Boolean @default(false)
-  is_active       Boolean @default(false)
+  is_done   Boolean @default(false)
+  is_active Boolean @default(false)
 
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   chapter Chapter @relation(fields: [chapter_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -158,32 +169,66 @@ model chapterProgress {
 }
 
 model QuizQuestion {
-  id                     String @id @default(cuid())
-  topic_id               String
-  topic    Topic         @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  topic_id String
+  topic    Topic  @relation(fields: [topic_id], references: [id], onDelete: Cascade)
 
-  level                  CourseDifficulty
+  level CourseDifficulty
 
-  question_text          String @db.Text
+  question_text String @db.Text
 
-  options                Json
-  correct_answer_index   Int
+  options              Json
+  correct_answer_index Int
 
-  created_at             DateTime @default(now())
-  updated_at             DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   @@index([topic_id, level])
 }
 
 model QuizAttempt {
-  id              String @id @default(cuid())
-  user_id         String
-  topic_id        String
+  id       String @id @default(cuid())
+  user_id  String
+  topic_id String
+
+  score Int
+  total Int
+
+  quiz_type             QuizType          @default(PRACTICE)
+  calculated_difficulty CourseDifficulty?
+
+  created_at DateTime @default(now())
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, topic_id])
+}
+
+model AssessmentQuestion {
+  id       String @id @default(cuid())
+  topic_id String
+
+  question_text        String @db.Text
+  options              Json
+  correct_answer_index Int
+
+  topic Topic @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([topic_id])
+}
+
+model Assessment {
+  id       String @id @default(cuid())
+  user_id  String
+  topic_id String
 
   score           Int
-  total           Int
-
-  calculated_difficulty CourseDifficulty
+  total_questions Int
+  points_earned   Int
 
   created_at DateTime @default(now())
 
