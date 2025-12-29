@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
-    "start:server": "node dist/server.js",
-    "start:worker": "node dist/worker.js",
+    "start": "node dist/src/server.js",
+    "start:server": "node dist/src/server.js",
+    "start:worker": "node dist/src/worker.js",
     "dev": "ts-node src/server.ts",
     "dev:worker": "ts-node src/worker.ts",
     "dev:nodemon": "nodemon --watch 'src/**/*.ts' --exec ts-node src/server.ts",
