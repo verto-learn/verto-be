@@ -5,10 +5,10 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/src/server.js",
     "start:server": "node dist/src/server.js",
     "start:worker": "node dist/src/worker.js",
-    "dev": "ts-node src/server.ts",
+    "start": "concurrently \"npm run start:server\" \"npm run start:worker\"",
+    "dev": "concurrently \"npx ts-node src/server.ts\" \"npx ts-node src/worker.ts\"",
     "dev:worker": "ts-node src/worker.ts",
     "dev:nodemon": "nodemon --watch 'src/**/*.ts' --exec ts-node src/server.ts",
     "seed": "ts-node prisma/seed.ts"
@@ -23,6 +23,7 @@
     "bcrypt": "^6.0.0",
     "bull": "^4.16.5",
     "canvas": "^3.2.0",
+    "concurrently": "^9.2.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
