@@ -4,8 +4,9 @@
  * Connection URL is now configured in prisma.config.ts for Prisma 7 compatibility.
  */
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 /**

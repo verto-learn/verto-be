@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start:server": "node dist/src/server.js",
     "start:worker": "node dist/src/worker.js",
     "start": "concurrently \"npm run start:server\" \"npm run start:worker\"",
